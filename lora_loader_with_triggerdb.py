@@ -25,14 +25,11 @@ class LoRaLoaderWithTriggerDB:
                 "strength_clip": ("FLOAT", {"default": 1.0, "min": -20.0, "max": 20.0, "step": 0.01}),
                 "all_triggers": ("STRING", {"multiline": True, "default": "", "dynamicPrompts": False}),
                 "active_triggers": ("STRING", {"multiline": True, "default": "", "dynamicPrompts": False}),
-            },
-            "optional": {
-                "clip": ("CLIP",),
             }
         }
     
-    RETURN_TYPES = ("MODEL", "CLIP", "STRING", "STRING")
-    RETURN_NAMES = ("model", "clip", "all_triggers", "active_triggers")
+    RETURN_TYPES = ("MODEL", "STRING", "STRING")
+    RETURN_NAMES = ("model", "all_triggers", "active_triggers")
     FUNCTION = "load_lora"
     CATEGORY = "loaders"
     
@@ -62,9 +59,9 @@ class LoRaLoaderWithTriggerDB:
         """Get the base name of the LoRa file (without extension)"""
         return os.path.splitext(lora_name)[0]
     
-    def load_lora(self, model, lora_name, strength_model, strength_clip, all_triggers, active_triggers, clip=None):
+    def load_lora(self, model, lora_name, strength_model, strength_clip, all_triggers, active_triggers):
         if strength_model == 0 and strength_clip == 0:
-            return (model, clip, all_triggers, active_triggers)
+            return (model, all_triggers, active_triggers)
         
         # Load LoRa
         lora_path = folder_paths.get_full_path("loras", lora_name)
@@ -74,13 +71,13 @@ class LoRaLoaderWithTriggerDB:
         
         if lora is None:
             print(f"Failed to load LoRa: {lora_name}")
-            return (model, clip, all_triggers, active_triggers)
+            return (model, all_triggers, active_triggers)
         
-        # Apply LoRa to model
-        model_lora, clip_lora = comfy.sd.load_lora_for_models(model, clip, lora, strength_model, strength_clip)
+        # Apply LoRa to model only
+        model_lora, _ = comfy.sd.load_lora_for_models(model, None, lora, strength_model, strength_clip)
         
-        # Return current trigger words (buttons handle load/save via web interface)
-        return (model_lora, clip_lora, all_triggers, active_triggers)
+        # Return model with LoRa applied and current trigger words
+        return (model_lora, all_triggers, active_triggers)
 
 
 # API endpoint for loading triggers
