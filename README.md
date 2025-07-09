@@ -1,76 +1,69 @@
 # LoRa Loader with Trigger Database
 
-A ComfyUI custom node that provides a LoRa loader with automatic storage and retrieval of trigger words. This node maintains a database of trigger words associated with each LoRa model, making it easy to remember and reuse the appropriate trigger words for your LoRa models.
+A ComfyUI custom node that provides a LoRa loader with persistent trigger word storage. Automatically saves and loads trigger words for each LoRa model, making your workflow more efficient.
 
 ## Features
 
-- **Searchable LoRa Dropdown**: Browse and select from all LoRa models in your ComfyUI loras folder
-- **Automatic Trigger Loading**: When you select a LoRa, the node automatically loads any previously saved trigger words (if the trigger field is empty)
-- **Load Triggers Button**: Explicitly load saved trigger words for the selected LoRa model
-- **Save Triggers Button**: Save the current trigger words to the database for the selected LoRa model
-- **Manual Override**: You can always manually edit trigger words in the text field
-- **Persistent Storage**: Trigger words are stored in a JSON database that persists between sessions
+- **Dual Trigger Fields**: Separate "All Triggers" and "Active Triggers" text fields
+- **Auto-loading**: Automatically loads saved triggers when selecting a LoRa
+- **Load/Save Buttons**: Explicit buttons for loading and saving trigger words
+- **Persistent Database**: Stores trigger words in JSON format between sessions
+- **Backward Compatible**: Migrates old single-field data automatically
 
 ## Installation
 
-1. Clone this repository into your ComfyUI custom_nodes folder:
-   ```bash
-   cd ComfyUI/custom_nodes
-   git clone https://github.com/your-username/comfy-lora-loader-with-triggerdb.git
+### Method 1: ComfyUI Manager (Recommended)
+1. Install via ComfyUI Manager using this Git URL:
+   ```
+   https://github.com/benstaniford/comfy-lora-loader-with-triggerdb
    ```
 
+### Method 2: Manual Installation
+1. Clone into your ComfyUI custom_nodes folder:
+   ```bash
+   cd ComfyUI/custom_nodes
+   git clone https://github.com/benstaniford/comfy-lora-loader-with-triggerdb.git
+   ```
 2. Restart ComfyUI
-
-3. The node will appear under the "loaders" category as "LoRa Loader with Trigger DB"
 
 ## Usage
 
-1. **Select a LoRa**: Use the dropdown to select a LoRa model from your collection
-2. **Auto-load Triggers**: If the trigger words field is empty and trigger words have been previously saved for this LoRa, they will automatically load
-3. **Load Triggers Button**: Click the "📥 Load Triggers" button to explicitly load saved trigger words for the selected LoRa
-4. **Edit Trigger Words**: Modify the trigger words in the text field as needed
-5. **Save Triggers Button**: Click the "💾 Save Triggers" button to save the current trigger words to the database
-6. **Connect Model**: Connect your model input and use the model output in your workflow
+1. Add the "LoRa Loader with Trigger DB" node from the "loaders" category
+2. Select a LoRa from the dropdown - triggers auto-load if fields are empty
+3. Use "All Triggers" for comprehensive trigger words, "Active Triggers" for current selection
+4. Click "📥 Load Triggers" to load saved data or "💾 Save Triggers" to save current data
+5. Connect outputs to your workflow
 
-## Inputs
+## Node Details
 
-- **model**: The base model to apply the LoRa to
-- **lora_name**: Dropdown selection of available LoRa models
-- **strength_model**: Model strength (default: 1.0, range: -20.0 to 20.0)
-- **strength_clip**: CLIP strength (default: 1.0, range: -20.0 to 20.0)
-- **trigger_words**: Text field for trigger words (multiline supported)
-- **clip**: (Optional) CLIP model input
+**Inputs:**
+- `model`: Base model to apply LoRa to
+- `lora_name`: LoRa selection dropdown  
+- `strength_model` / `strength_clip`: LoRa strength values (-20.0 to 20.0)
+- `all_triggers`: Text field for all available trigger words
+- `active_triggers`: Text field for currently active trigger words
+- `clip`: (Optional) CLIP model input
 
-## Interface Elements
-
-- **📥 Load Triggers Button**: Loads saved trigger words for the selected LoRa model
-- **💾 Save Triggers Button**: Saves the current trigger words to the database
-
-## Outputs
-
-- **model**: The model with LoRa applied
-- **clip**: The CLIP model with LoRa applied
-- **trigger_words**: The trigger words as a string (can be connected to prompt nodes)
+**Outputs:**
+- `model`: Model with LoRa applied
+- `clip`: CLIP with LoRa applied  
+- `all_triggers`: All triggers as string output
+- `active_triggers`: Active triggers as string output
 
 ## Database
 
-The trigger words are stored in a file called `triggers.json` in your ComfyUI loras folder. The file structure is:
+Trigger words are stored in `triggers.json` in your ComfyUI loras folder:
 
 ```json
 {
-  "lora_model_name": "trigger words for this model",
-  "another_lora": "different trigger words"
+  "lora_name": {
+    "all_triggers": "masterpiece, best quality, detailed",
+    "active_triggers": "masterpiece, best quality"
+  }
 }
 ```
 
-The file is created automatically when you first save trigger words for a LoRa model.
-
-## Technical Details
-
-- The node uses the base filename (without extension) as the key for storing trigger words
-- The database file is automatically created if it doesn't exist
-- Error handling ensures the node continues to work even if the database file is corrupted
-- The web interface automatically loads trigger words when the LoRa selection changes
+The database file is created automatically and handles migration from older formats.
 
 ## License
 
