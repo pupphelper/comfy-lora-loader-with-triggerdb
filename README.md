@@ -2,6 +2,8 @@
 
 A ComfyUI custom node that provides a LoRa loader with persistent trigger word storage. Automatically saves and loads trigger words for each LoRa model, making your workflow more efficient.
 
+> **Note:** This node is designed to be used in conjunction with a prompt combiner node such as **CR Combine Prompt**. Use this node to manage and store trigger words, then connect its outputs to a prompt combiner to build your final prompt for generation.
+
 ## Features
 
 - **Dual Trigger Fields**: Separate "All Triggers" and "Active Triggers" text fields
