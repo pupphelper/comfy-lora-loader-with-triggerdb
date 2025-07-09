@@ -9,7 +9,7 @@ A ComfyUI custom node that provides a LoRa loader with persistent trigger word s
 - **Dual Trigger Fields**: Separate "All Triggers" and "Active Triggers" text fields
 - **Auto-loading**: Automatically loads saved triggers when selecting a LoRa
 - **Load/Save Buttons**: Explicit buttons for loading and saving trigger words
-- **Persistent Database**: Stores trigger words in JSON format between sessions in {Comfy}/models/loras/triggers.json
+- **Persistent Database**: Stores trigger words in JSON format between sessions in `user/default/user-db/lora-triggers.json` in your ComfyUI directory
 - **Stores all/active triggers**: Can be used to store all the triggers but also just the one you're currently using
 
 ## Screenshot

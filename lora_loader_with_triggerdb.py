@@ -6,11 +6,25 @@ import comfy.utils
 from aiohttp import web
 import server
 
+def get_user_db_path():
+    """Get the user database directory"""
+    try:
+        # Get the ComfyUI root directory
+        comfy_path = folder_paths.base_path
+        user_db_path = os.path.join(comfy_path, "user", "default", "user-db")
+        os.makedirs(user_db_path, exist_ok=True)
+        return user_db_path
+    except Exception as e:
+        print(f"Error determining user DB path: {e}")
+        # Fallback to the old location
+        lora_path = folder_paths.get_folder_paths("loras")[0] if folder_paths.get_folder_paths("loras") else ""
+        return lora_path
+
 
 class LoRaLoaderWithTriggerDB:
     def __init__(self):
-        self.lora_path = folder_paths.get_folder_paths("loras")[0] if folder_paths.get_folder_paths("loras") else ""
-        self.triggers_file = os.path.join(self.lora_path, "triggers.json")
+        self.user_db_path = get_user_db_path()
+        self.triggers_file = os.path.join(self.user_db_path, "lora-triggers.json")
     
     @classmethod
     def INPUT_TYPES(cls):
@@ -89,9 +103,9 @@ async def load_lora_triggers(request):
         if not lora_name:
             return web.json_response({"all_triggers": "", "active_triggers": ""})
         
-        # Get LoRa path and triggers file
-        lora_path = folder_paths.get_folder_paths("loras")[0] if folder_paths.get_folder_paths("loras") else ""
-        triggers_file = os.path.join(lora_path, "triggers.json")
+        # Get user database directory and triggers file
+        user_db_path = get_user_db_path()
+        triggers_file = os.path.join(user_db_path, "lora-triggers.json")
         
         # Load triggers database
         triggers_db = {}
@@ -135,9 +149,9 @@ async def save_lora_triggers(request):
         if not lora_name:
             return web.json_response({"success": False, "message": "No LoRa name provided"})
         
-        # Get LoRa path and triggers file
-        lora_path = folder_paths.get_folder_paths("loras")[0] if folder_paths.get_folder_paths("loras") else ""
-        triggers_file = os.path.join(lora_path, "triggers.json")
+        # Get user database directory and triggers file
+        user_db_path = get_user_db_path()
+        triggers_file = os.path.join(user_db_path, "lora-triggers.json")
         
         # Load existing triggers database
         triggers_db = {}
