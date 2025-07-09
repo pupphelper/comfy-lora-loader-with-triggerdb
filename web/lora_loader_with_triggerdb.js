@@ -39,10 +39,8 @@ app.registerExtension({
                         loraWidget.inputEl.addEventListener('change', async (event) => {
                             const value = event.target.value;
                             
-                            // Only auto-load triggers if both trigger fields are empty
-                            if (value && 
-                                (!allTriggersWidget.value || allTriggersWidget.value.trim() === "") &&
-                                (!activeTriggersWidget.value || activeTriggersWidget.value.trim() === "")) {
+                            // Auto-load triggers whenever LoRa changes
+                            if (value) {
                                 try {
                                     const response = await api.fetchApi("/lora_triggers", {
                                         method: "POST",
@@ -56,13 +54,21 @@ app.registerExtension({
                                     
                                     if (response.ok) {
                                         const data = await response.json();
-                                        if (data.all_triggers) {
-                                            allTriggersWidget.value = data.all_triggers;
-                                            allTriggersWidget.callback && allTriggersWidget.callback(data.all_triggers);
-                                        }
-                                        if (data.active_triggers) {
-                                            activeTriggersWidget.value = data.active_triggers;
-                                            activeTriggersWidget.callback && activeTriggersWidget.callback(data.active_triggers);
+                                        if (data.all_triggers || data.active_triggers) {
+                                            allTriggersWidget.value = data.all_triggers || "";
+                                            allTriggersWidget.callback && allTriggersWidget.callback(data.all_triggers || "");
+                                            
+                                            activeTriggersWidget.value = data.active_triggers || "";
+                                            activeTriggersWidget.callback && activeTriggersWidget.callback(data.active_triggers || "");
+                                            
+                                            console.log(`Auto-loaded triggers for ${value}: all="${data.all_triggers}", active="${data.active_triggers}"`);
+                                        } else {
+                                            // Clear fields if no saved triggers
+                                            allTriggersWidget.value = "";
+                                            allTriggersWidget.callback && allTriggersWidget.callback("");
+                                            
+                                            activeTriggersWidget.value = "";
+                                            activeTriggersWidget.callback && activeTriggersWidget.callback("");
                                         }
                                     }
                                 } catch (error) {
@@ -88,11 +94,8 @@ app.registerExtension({
                             }
                         }
                         
-                        // Only auto-load triggers if this looks like a complete LoRa selection
-                        // (not just typing for filtering)
-                        if (value && 
-                            (!allTriggersWidget.value || allTriggersWidget.value.trim() === "") &&
-                            (!activeTriggersWidget.value || activeTriggersWidget.value.trim() === "")) {
+                        // Auto-load triggers whenever LoRa changes (backup method)
+                        if (value) {
                             // Add a small delay to ensure this is a final selection, not just typing
                             setTimeout(async () => {
                                 try {
@@ -108,13 +111,19 @@ app.registerExtension({
                                     
                                     if (response.ok) {
                                         const data = await response.json();
-                                        if (data.all_triggers) {
-                                            allTriggersWidget.value = data.all_triggers;
-                                            allTriggersWidget.callback && allTriggersWidget.callback(data.all_triggers);
-                                        }
-                                        if (data.active_triggers) {
-                                            activeTriggersWidget.value = data.active_triggers;
-                                            activeTriggersWidget.callback && activeTriggersWidget.callback(data.active_triggers);
+                                        if (data.all_triggers || data.active_triggers) {
+                                            allTriggersWidget.value = data.all_triggers || "";
+                                            allTriggersWidget.callback && allTriggersWidget.callback(data.all_triggers || "");
+                                            
+                                            activeTriggersWidget.value = data.active_triggers || "";
+                                            activeTriggersWidget.callback && activeTriggersWidget.callback(data.active_triggers || "");
+                                        } else {
+                                            // Clear fields if no saved triggers
+                                            allTriggersWidget.value = "";
+                                            allTriggersWidget.callback && allTriggersWidget.callback("");
+                                            
+                                            activeTriggersWidget.value = "";
+                                            activeTriggersWidget.callback && activeTriggersWidget.callback("");
                                         }
                                     }
                                 } catch (error) {
