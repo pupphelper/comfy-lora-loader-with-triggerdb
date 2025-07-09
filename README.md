@@ -12,6 +12,12 @@ A ComfyUI custom node that provides a LoRa loader with persistent trigger word s
 - **Persistent Database**: Stores trigger words in JSON format between sessions in {Comfy}/models/loras/triggers.json
 - **Stores all/active triggers**: Can be used to store all the triggers but also just the one you're currently using
 
+## Screenshot
+
+LoRa loader with Trigger DB being used to apply triggers as part of a combination prompt with CR Combine Prompt:
+
+![image](https://github.com/user-attachments/assets/e9a8fca0-e33c-4785-8b54-1c31f9b25518)
+
 ## Installation
 
 ### Method 1: ComfyUI Manager (Recommended)
