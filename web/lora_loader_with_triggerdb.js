@@ -21,11 +21,16 @@ app.registerExtension({
                 
                 // Find the widgets
                 const loraWidget = this.widgets.find(w => w.name === "lora_name");
-                const triggerWidget = this.widgets.find(w => w.name === "trigger_words");
+                const allTriggersWidget = this.widgets.find(w => w.name === "all_triggers");
+                const activeTriggersWidget = this.widgets.find(w => w.name === "active_triggers");
                 
-                console.log("Found widgets:", { lora: !!loraWidget, trigger: !!triggerWidget });
+                console.log("Found widgets:", { 
+                    lora: !!loraWidget, 
+                    allTriggers: !!allTriggersWidget, 
+                    activeTriggers: !!activeTriggersWidget 
+                });
                 
-                if (loraWidget && triggerWidget) {
+                if (loraWidget && allTriggersWidget && activeTriggersWidget) {
                     console.log("Adding buttons to LoRa Loader node");
                     
                     // Alternative approach: Use change event instead of overriding callback
@@ -34,8 +39,10 @@ app.registerExtension({
                         loraWidget.inputEl.addEventListener('change', async (event) => {
                             const value = event.target.value;
                             
-                            // Only auto-load triggers if trigger field is empty
-                            if (value && (!triggerWidget.value || triggerWidget.value.trim() === "")) {
+                            // Only auto-load triggers if both trigger fields are empty
+                            if (value && 
+                                (!allTriggersWidget.value || allTriggersWidget.value.trim() === "") &&
+                                (!activeTriggersWidget.value || activeTriggersWidget.value.trim() === "")) {
                                 try {
                                     const response = await api.fetchApi("/lora_triggers", {
                                         method: "POST",
@@ -49,9 +56,13 @@ app.registerExtension({
                                     
                                     if (response.ok) {
                                         const data = await response.json();
-                                        if (data.trigger_words) {
-                                            triggerWidget.value = data.trigger_words;
-                                            triggerWidget.callback && triggerWidget.callback(data.trigger_words);
+                                        if (data.all_triggers) {
+                                            allTriggersWidget.value = data.all_triggers;
+                                            allTriggersWidget.callback && allTriggersWidget.callback(data.all_triggers);
+                                        }
+                                        if (data.active_triggers) {
+                                            activeTriggersWidget.value = data.active_triggers;
+                                            activeTriggersWidget.callback && activeTriggersWidget.callback(data.active_triggers);
                                         }
                                     }
                                 } catch (error) {
@@ -79,7 +90,9 @@ app.registerExtension({
                         
                         // Only auto-load triggers if this looks like a complete LoRa selection
                         // (not just typing for filtering)
-                        if (value && !triggerWidget.value || triggerWidget.value.trim() === "") {
+                        if (value && 
+                            (!allTriggersWidget.value || allTriggersWidget.value.trim() === "") &&
+                            (!activeTriggersWidget.value || activeTriggersWidget.value.trim() === "")) {
                             // Add a small delay to ensure this is a final selection, not just typing
                             setTimeout(async () => {
                                 try {
@@ -95,9 +108,13 @@ app.registerExtension({
                                     
                                     if (response.ok) {
                                         const data = await response.json();
-                                        if (data.trigger_words) {
-                                            triggerWidget.value = data.trigger_words;
-                                            triggerWidget.callback && triggerWidget.callback(data.trigger_words);
+                                        if (data.all_triggers) {
+                                            allTriggersWidget.value = data.all_triggers;
+                                            allTriggersWidget.callback && allTriggersWidget.callback(data.all_triggers);
+                                        }
+                                        if (data.active_triggers) {
+                                            activeTriggersWidget.value = data.active_triggers;
+                                            activeTriggersWidget.callback && activeTriggersWidget.callback(data.active_triggers);
                                         }
                                     }
                                 } catch (error) {
@@ -129,10 +146,16 @@ app.registerExtension({
                             
                             if (response.ok) {
                                 const data = await response.json();
-                                if (data.trigger_words) {
-                                    triggerWidget.value = data.trigger_words;
-                                    triggerWidget.callback && triggerWidget.callback(data.trigger_words);
-                                    console.log(`Loaded triggers for ${loraName}: ${data.trigger_words}`);
+                                if (data.all_triggers || data.active_triggers) {
+                                    if (data.all_triggers) {
+                                        allTriggersWidget.value = data.all_triggers;
+                                        allTriggersWidget.callback && allTriggersWidget.callback(data.all_triggers);
+                                    }
+                                    if (data.active_triggers) {
+                                        activeTriggersWidget.value = data.active_triggers;
+                                        activeTriggersWidget.callback && activeTriggersWidget.callback(data.active_triggers);
+                                    }
+                                    console.log(`Loaded triggers for ${loraName}: all="${data.all_triggers}", active="${data.active_triggers}"`);
                                 } else {
                                     console.log(`No saved triggers found for ${loraName}`);
                                 }
@@ -145,14 +168,16 @@ app.registerExtension({
                     // Add save triggers button
                     this.addWidget("button", "💾 Save Triggers", "", async () => {
                         const loraName = loraWidget.value;
-                        const triggers = triggerWidget.value;
+                        const allTriggers = allTriggersWidget.value;
+                        const activeTriggers = activeTriggersWidget.value;
                         
                         if (!loraName) {
                             console.log("No LoRa selected");
                             return;
                         }
                         
-                        if (!triggers || triggers.trim() === "") {
+                        if ((!allTriggers || allTriggers.trim() === "") && 
+                            (!activeTriggers || activeTriggers.trim() === "")) {
                             console.log("No trigger words to save");
                             return;
                         }
@@ -165,7 +190,8 @@ app.registerExtension({
                                 },
                                 body: JSON.stringify({
                                     lora_name: loraName,
-                                    trigger_words: triggers
+                                    all_triggers: allTriggers,
+                                    active_triggers: activeTriggers
                                 })
                             });
                             

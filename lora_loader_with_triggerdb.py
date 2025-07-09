@@ -23,15 +23,16 @@ class LoRaLoaderWithTriggerDB:
                 "lora_name": (loras, {"default": loras[0] if loras else ""}),
                 "strength_model": ("FLOAT", {"default": 1.0, "min": -20.0, "max": 20.0, "step": 0.01}),
                 "strength_clip": ("FLOAT", {"default": 1.0, "min": -20.0, "max": 20.0, "step": 0.01}),
-                "trigger_words": ("STRING", {"multiline": True, "default": "", "dynamicPrompts": False}),
+                "all_triggers": ("STRING", {"multiline": True, "default": "", "dynamicPrompts": False}),
+                "active_triggers": ("STRING", {"multiline": True, "default": "", "dynamicPrompts": False}),
             },
             "optional": {
                 "clip": ("CLIP",),
             }
         }
     
-    RETURN_TYPES = ("MODEL", "CLIP", "STRING")
-    RETURN_NAMES = ("model", "clip", "trigger_words")
+    RETURN_TYPES = ("MODEL", "CLIP", "STRING", "STRING")
+    RETURN_NAMES = ("model", "clip", "all_triggers", "active_triggers")
     FUNCTION = "load_lora"
     CATEGORY = "loaders"
     
@@ -61,9 +62,9 @@ class LoRaLoaderWithTriggerDB:
         """Get the base name of the LoRa file (without extension)"""
         return os.path.splitext(lora_name)[0]
     
-    def load_lora(self, model, lora_name, strength_model, strength_clip, trigger_words, clip=None):
+    def load_lora(self, model, lora_name, strength_model, strength_clip, all_triggers, active_triggers, clip=None):
         if strength_model == 0 and strength_clip == 0:
-            return (model, clip, trigger_words)
+            return (model, clip, all_triggers, active_triggers)
         
         # Load LoRa
         lora_path = folder_paths.get_full_path("loras", lora_name)
@@ -73,13 +74,13 @@ class LoRaLoaderWithTriggerDB:
         
         if lora is None:
             print(f"Failed to load LoRa: {lora_name}")
-            return (model, clip, trigger_words)
+            return (model, clip, all_triggers, active_triggers)
         
         # Apply LoRa to model
         model_lora, clip_lora = comfy.sd.load_lora_for_models(model, clip, lora, strength_model, strength_clip)
         
         # Return current trigger words (buttons handle load/save via web interface)
-        return (model_lora, clip_lora, trigger_words)
+        return (model_lora, clip_lora, all_triggers, active_triggers)
 
 
 # API endpoint for loading triggers
@@ -90,7 +91,7 @@ async def load_lora_triggers(request):
         lora_name = data.get("lora_name", "")
         
         if not lora_name:
-            return web.json_response({"trigger_words": ""})
+            return web.json_response({"all_triggers": "", "active_triggers": ""})
         
         # Get LoRa path and triggers file
         lora_path = folder_paths.get_folder_paths("loras")[0] if folder_paths.get_folder_paths("loras") else ""
@@ -107,13 +108,23 @@ async def load_lora_triggers(request):
         
         # Get base name and lookup triggers
         lora_base_name = os.path.splitext(lora_name)[0]
-        trigger_words = triggers_db.get(lora_base_name, "")
+        lora_data = triggers_db.get(lora_base_name, {})
         
-        return web.json_response({"trigger_words": trigger_words})
+        # Handle both old format (string) and new format (dict)
+        if isinstance(lora_data, str):
+            # Old format - migrate to new format
+            all_triggers = lora_data
+            active_triggers = ""
+        else:
+            # New format
+            all_triggers = lora_data.get("all_triggers", "")
+            active_triggers = lora_data.get("active_triggers", "")
+        
+        return web.json_response({"all_triggers": all_triggers, "active_triggers": active_triggers})
         
     except Exception as e:
         print(f"Error in load_lora_triggers: {e}")
-        return web.json_response({"trigger_words": ""}, status=500)
+        return web.json_response({"all_triggers": "", "active_triggers": ""}, status=500)
 
 
 # API endpoint for saving triggers
@@ -122,7 +133,8 @@ async def save_lora_triggers(request):
     try:
         data = await request.json()
         lora_name = data.get("lora_name", "")
-        trigger_words = data.get("trigger_words", "")
+        all_triggers = data.get("all_triggers", "")
+        active_triggers = data.get("active_triggers", "")
         
         if not lora_name:
             return web.json_response({"success": False, "message": "No LoRa name provided"})
@@ -142,8 +154,11 @@ async def save_lora_triggers(request):
         
         # Save trigger words
         lora_base_name = os.path.splitext(lora_name)[0]
-        if trigger_words.strip():
-            triggers_db[lora_base_name] = trigger_words.strip()
+        if all_triggers.strip() or active_triggers.strip():
+            triggers_db[lora_base_name] = {
+                "all_triggers": all_triggers.strip(),
+                "active_triggers": active_triggers.strip()
+            }
             
             # Save to file
             try:
@@ -151,7 +166,7 @@ async def save_lora_triggers(request):
                 with open(triggers_file, 'w', encoding='utf-8') as f:
                     json.dump(triggers_db, f, indent=2, ensure_ascii=False)
                 
-                print(f"Saved trigger words for {lora_base_name}: {trigger_words}")
+                print(f"Saved triggers for {lora_base_name}: all='{all_triggers}', active='{active_triggers}'")
                 return web.json_response({"success": True, "message": f"Saved triggers for {lora_base_name}"})
                 
             except Exception as e:
