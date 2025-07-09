@@ -41,7 +41,7 @@ A ComfyUI custom node that provides a LoRa loader with persistent trigger word s
 **Inputs:**
 - `model`: Base model to apply LoRa to
 - `lora_name`: LoRa selection dropdown  
-- `strength_model` / `strength_clip`: LoRa strength values (-20.0 to 20.0)
+- `strength_model`: LoRa strength value (-20.0 to 20.0)
 - `all_triggers`: Text field for all available trigger words
 - `active_triggers`: Text field for currently active trigger words
 - `clip`: (Optional) CLIP model input

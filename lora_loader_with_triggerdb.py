@@ -22,7 +22,6 @@ class LoRaLoaderWithTriggerDB:
                 "model": ("MODEL",),
                 "lora_name": (loras, {"default": loras[0] if loras else ""}),
                 "strength_model": ("FLOAT", {"default": 1.0, "min": -20.0, "max": 20.0, "step": 0.01}),
-                "strength_clip": ("FLOAT", {"default": 1.0, "min": -20.0, "max": 20.0, "step": 0.01}),
                 "all_triggers": ("STRING", {"multiline": True, "default": "", "dynamicPrompts": False}),
                 "active_triggers": ("STRING", {"multiline": True, "default": "", "dynamicPrompts": False}),
             }
@@ -59,8 +58,8 @@ class LoRaLoaderWithTriggerDB:
         """Get the base name of the LoRa file (without extension)"""
         return os.path.splitext(lora_name)[0]
     
-    def load_lora(self, model, lora_name, strength_model, strength_clip, all_triggers, active_triggers):
-        if strength_model == 0 and strength_clip == 0:
+    def load_lora(self, model, lora_name, strength_model, all_triggers, active_triggers):
+        if strength_model == 0:
             return (model, all_triggers, active_triggers)
         
         # Load LoRa
@@ -74,7 +73,7 @@ class LoRaLoaderWithTriggerDB:
             return (model, all_triggers, active_triggers)
         
         # Apply LoRa to model only
-        model_lora, _ = comfy.sd.load_lora_for_models(model, None, lora, strength_model, strength_clip)
+        model_lora, _ = comfy.sd.load_lora_for_models(model, None, lora, strength_model, 0)
         
         # Return model with LoRa applied and current trigger words
         return (model_lora, all_triggers, active_triggers)
