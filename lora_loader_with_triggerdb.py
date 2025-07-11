@@ -46,28 +46,6 @@ class LoRaLoaderWithTriggerDB:
     FUNCTION = "load_lora"
     CATEGORY = "loaders"
     
-    def load_triggers_db(self):
-        """Load the triggers database from JSON file"""
-        if os.path.exists(self.triggers_file):
-            try:
-                with open(self.triggers_file, 'r', encoding='utf-8') as f:
-                    return json.load(f)
-            except (json.JSONDecodeError, Exception) as e:
-                print(f"Error loading triggers.json: {e}")
-                return {}
-        return {}
-    
-    def save_triggers_db(self, triggers_db):
-        """Save the triggers database to JSON file"""
-        try:
-            # Ensure the directory exists
-            os.makedirs(os.path.dirname(self.triggers_file), exist_ok=True)
-            
-            with open(self.triggers_file, 'w', encoding='utf-8') as f:
-                json.dump(triggers_db, f, indent=2, ensure_ascii=False)
-        except Exception as e:
-            print(f"Error saving triggers.json: {e}")
-    
     def get_lora_base_name(self, lora_name):
         """Get the base name of the LoRa file (without extension)"""
         return os.path.splitext(lora_name)[0]
