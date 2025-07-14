@@ -9,8 +9,20 @@ A ComfyUI custom node that provides a LoRa loader with persistent trigger word s
 - **Dual Trigger Fields**: Separate "All Triggers" and "Active Triggers" text fields
 - **Auto-loading**: Automatically loads saved triggers when selecting a LoRa
 - **Load/Save Buttons**: Explicit buttons for loading and saving trigger words
+- **Load Metadata Button**: Attempts to extract trigger words directly from the LoRa file's metadata (see below)
 - **Persistent Database**: Stores trigger words in JSON format between sessions in `user/default/user-db/lora-triggers.json` in your ComfyUI directory
 - **Stores all/active triggers**: Can be used to store all the triggers but also just the one you're currently using
+
+## Load Metadata Button
+
+The **"🔍 Load Metadata"** button tries to automatically extract trigger words from the selected LoRa file's metadata. If the LoRa was trained with tools like Kohya or includes trigger word information in its metadata, this button will populate the "All Triggers" and "Active Triggers" fields with those words.
+
+- **How it works:**
+  - Reads the LoRa file's metadata and looks for common keys such as `trained_words`, `ss_tag_strings`, `ss_tag_frequency`, or any key containing "trigger" or "word".
+  - Cleans and deduplicates the extracted words, then fills both trigger fields.
+- **Limitations:**
+  - This feature only works if the LoRa file actually contains trigger word metadata. Not all LoRas include this information—especially older or manually edited files.
+  - If no trigger words are found, the fields will remain unchanged and a message will be logged.
 
 ## Screenshot
 
@@ -40,7 +52,8 @@ LoRa loader with Trigger DB being used to apply triggers as part of a combinatio
 2. Select a LoRa from the dropdown - triggers auto-load if fields are empty
 3. Use "All Triggers" for comprehensive trigger words, "Active Triggers" for current selection
 4. Click "📥 Load Triggers" to load saved data or "💾 Save Triggers" to save current data
-5. Connect outputs to your workflow
+5. Click "🔍 Load Metadata" to attempt to extract trigger words directly from the LoRa file's metadata
+6. Connect outputs to your workflow
 
 ## Node Details
 

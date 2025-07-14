@@ -1,5 +1,6 @@
 import os
 import json
+import re
 import folder_paths
 import comfy.sd
 import comfy.utils
@@ -19,6 +20,101 @@ def get_user_db_path():
         # Fallback to the old location
         lora_path = folder_paths.get_folder_paths("loras")[0] if folder_paths.get_folder_paths("loras") else ""
         return lora_path
+
+
+def extract_triggers_from_metadata(meta):
+    """Extract trigger words from LoRa metadata"""
+    if not isinstance(meta, dict):
+        return []
+    
+    # Try common keys used by Kohya and others
+    for key in ["ss_tag_frequency", "ss_tag_strings", "trained_words", "trigger_words"]:
+        if key in meta:
+            val = meta[key]
+            if isinstance(val, str):
+                # Sometimes it's a JSON string or comma-separated
+                try:
+                    val = json.loads(val)
+                except Exception:
+                    val = [v.strip() for v in val.split(",")]
+            if isinstance(val, dict):
+                # Kohya's ss_tag_frequency is a dict of word:count
+                return list(val.keys())
+            if isinstance(val, list):
+                return [str(v) for v in val]
+    
+    # Try to find any key with "trigger" or "word" in it
+    for k, v in meta.items():
+        if "trigger" in k or "word" in k:
+            if isinstance(v, str):
+                try:
+                    v = json.loads(v)
+                except Exception:
+                    v = [vv.strip() for vv in v.split(",")]
+            if isinstance(v, dict):
+                return list(v.keys())
+            if isinstance(v, list):
+                return [str(x) for x in v]
+    return []
+
+def clean_trigger_word(word):
+    """Clean trigger word by removing leading numbers and underscores"""
+    # Remove leading numbers and underscores, e.g. '1_girl' -> 'girl'
+    cleaned = re.sub(r'^\d+_', '', word)
+    if cleaned.lower() in {"img", "img_dir", "image_dir"}:
+        return None  # Filter out these words
+    return cleaned
+
+def read_lora_metadata(lora_path):
+    """Read metadata from LoRa file"""
+    if not os.path.isfile(lora_path):
+        return {}
+    
+    ext = os.path.splitext(lora_path)[1].lower()
+    meta = {}
+    
+    try:
+        if ext == ".safetensors":
+            # Read safetensors metadata
+            try:
+                from safetensors.torch import safe_open
+                with safe_open(lora_path, framework="pt", device="cpu") as f:
+                    meta = f.metadata()
+            except ImportError:
+                # Fallback: try to use ComfyUI's built-in loading method
+                try:
+                    import safetensors
+                    with safetensors.safe_open(lora_path, framework="pt", device="cpu") as f:
+                        meta = f.metadata()
+                except ImportError:
+                    print("safetensors not available, cannot read .safetensors metadata")
+                    return {}
+            except Exception as e:
+                print(f"Error reading safetensors metadata from {lora_path}: {e}")
+                return {}
+        elif ext in [".pt", ".bin"]:
+            # Read PyTorch metadata
+            try:
+                import torch
+                data = torch.load(lora_path, map_location="cpu")
+                if "metadata" in data:
+                    meta = data["metadata"]
+                elif "meta" in data:
+                    meta = data["meta"]
+                else:
+                    # Sometimes the dict itself contains metadata
+                    meta = data
+            except Exception as e:
+                print(f"Error reading torch metadata from {lora_path}: {e}")
+                return {}
+        else:
+            print(f"Unsupported file type: {ext}")
+            return {}
+    except Exception as e:
+        print(f"Error reading metadata from {lora_path}: {e}")
+        return {}
+    
+    return meta
 
 
 class LoRaLoaderWithTriggerDB:
@@ -198,7 +294,60 @@ async def save_lora_triggers(request):
         return web.json_response({"success": False, "message": f"Error: {e}"}, status=500)
 
 
-# JavaScript to handle dynamic trigger loading will be in web/lora_loader_with_triggerdb.js
+# API endpoint for loading metadata
+@server.PromptServer.instance.routes.post("/lora_metadata")
+async def load_lora_metadata(request):
+    try:
+        data = await request.json()
+        lora_name = data.get("lora_name", "")
+        
+        if not lora_name:
+            return web.json_response({"success": False, "message": "No LoRa name provided"})
+        
+        # Get full path to LoRa file
+        lora_path = folder_paths.get_full_path("loras", lora_name)
+        
+        if not os.path.isfile(lora_path):
+            return web.json_response({"success": False, "message": f"LoRa file not found: {lora_name}"})
+        
+        # Read metadata from LoRa file
+        meta = read_lora_metadata(lora_path)
+        
+        if not meta:
+            return web.json_response({"success": False, "message": "No metadata found in LoRa file"})
+        
+        # Extract trigger words from metadata
+        triggers = extract_triggers_from_metadata(meta)
+        
+        if not triggers:
+            return web.json_response({"success": False, "message": "No trigger words found in metadata"})
+        
+        # Clean trigger words
+        cleaned_triggers = []
+        for trigger in triggers:
+            cleaned = clean_trigger_word(trigger)
+            if cleaned and cleaned not in cleaned_triggers:  # Remove duplicates and None values
+                cleaned_triggers.append(cleaned)
+        
+        if not cleaned_triggers:
+            return web.json_response({"success": False, "message": "No valid trigger words found after cleaning"})
+        
+        # Join triggers with commas
+        all_triggers = ", ".join(cleaned_triggers)
+        
+        # For active triggers, use the same as all triggers initially
+        active_triggers = all_triggers
+        
+        return web.json_response({
+            "success": True,
+            "all_triggers": all_triggers,
+            "active_triggers": active_triggers,
+            "message": f"Loaded {len(cleaned_triggers)} trigger words from metadata"
+        })
+        
+    except Exception as e:
+        print(f"Error in load_lora_metadata: {e}")
+        return web.json_response({"success": False, "message": f"Error loading metadata: {e}"}, status=500)
 
 
 NODE_CLASS_MAPPINGS = {

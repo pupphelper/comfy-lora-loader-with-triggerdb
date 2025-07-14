@@ -154,6 +154,46 @@ app.registerExtension({
                         }
                     }, { serialize: false });
                     
+                    // Add load metadata button
+                    this.addWidget("button", "🔍 Load Metadata", "", async () => {
+                        const loraName = loraWidget.value;
+                        if (!loraName) {
+                            return;
+                        }
+                        
+                        try {
+                            const response = await api.fetchApi("/lora_metadata", {
+                                method: "POST",
+                                headers: {
+                                    "Content-Type": "application/json",
+                                },
+                                body: JSON.stringify({
+                                    lora_name: loraName
+                                })
+                            });
+                            
+                            if (response.ok) {
+                                const data = await response.json();
+                                if (data.success) {
+                                    // Load the trigger words from metadata
+                                    if (data.all_triggers) {
+                                        allTriggersWidget.value = data.all_triggers;
+                                        allTriggersWidget.callback && allTriggersWidget.callback(data.all_triggers);
+                                    }
+                                    if (data.active_triggers) {
+                                        activeTriggersWidget.value = data.active_triggers;
+                                        activeTriggersWidget.callback && activeTriggersWidget.callback(data.active_triggers);
+                                    }
+                                    console.log(`Loaded metadata: ${data.message}`);
+                                } else {
+                                    console.log(`Could not load metadata: ${data.message}`);
+                                }
+                            }
+                        } catch (error) {
+                            console.error("Error loading metadata:", error);
+                        }
+                    }, { serialize: false });
+                    
                     // Add save triggers button
                     this.addWidget("button", "💾 Save Triggers", "", async () => {
                         const loraName = loraWidget.value;
