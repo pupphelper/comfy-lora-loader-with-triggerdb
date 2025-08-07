@@ -134,6 +134,7 @@ class LoRaLoaderWithTriggerDB:
                 "strength_model": ("FLOAT", {"default": 1.0, "min": -20.0, "max": 20.0, "step": 0.01}),
                 "all_triggers": ("STRING", {"multiline": True, "default": "", "dynamicPrompts": False}),
                 "active_triggers": ("STRING", {"multiline": True, "default": "", "dynamicPrompts": False}),
+                "autoload_triggers": ("BOOLEAN", {"default": True}),  # <-- NEW TOGGLE
             }
         }
     
@@ -174,23 +175,54 @@ class LoRaLoaderWithTriggerDB:
         # No match found
         return {}
     
-    def load_lora(self, model, lora_name, strength_model, all_triggers, active_triggers):
+    def load_lora(self, model, lora_name, strength_model, all_triggers, active_triggers, autoload_triggers):
         if strength_model == 0:
             return (model, all_triggers, active_triggers)
-        
+
+        if autoload_triggers:
+            # --- Auto-load triggers based on lora_name ---
+            triggers_db = {}
+            if os.path.exists(self.triggers_file):
+                try:
+                    with open(self.triggers_file, 'r', encoding='utf-8') as f:
+                        triggers_db = json.load(f)
+                except (json.JSONDecodeError, Exception) as e:
+                    print(f"Error loading triggers.json: {e}")
+
+            lora_data = self.find_lora_in_db(triggers_db, lora_name)
+            if isinstance(lora_data, str):
+                all_triggers = lora_data
+                active_triggers = lora_data
+            elif isinstance(lora_data, dict) and lora_data:
+                all_triggers = lora_data.get("all_triggers", "")
+                active_triggers = lora_data.get("active_triggers", "") or all_triggers
+            else:
+                # Fallback: Try to load from metadata
+                lora_path = folder_paths.get_full_path("loras", lora_name)
+                meta = read_lora_metadata(lora_path)
+                triggers = extract_triggers_from_metadata(meta)
+                cleaned_triggers = []
+                for trigger in triggers:
+                    cleaned = clean_trigger_word(trigger)
+                    if cleaned and cleaned not in cleaned_triggers:
+                        cleaned_triggers.append(cleaned)
+                all_triggers = ", ".join(cleaned_triggers)
+                active_triggers = all_triggers
+            # --- END AUTOLOAD ---
+
         # Load LoRa
         lora_path = folder_paths.get_full_path("loras", lora_name)
         lora = None
         if os.path.isfile(lora_path):
             lora = comfy.utils.load_torch_file(lora_path, safe_load=True)
-        
+
         if lora is None:
             print(f"Failed to load LoRa: {lora_name}")
             return (model, all_triggers, active_triggers)
-        
+
         # Apply LoRa to model only
         model_lora, _ = comfy.sd.load_lora_for_models(model, None, lora, strength_model, 0)
-        
+
         # Return model with LoRa applied and current trigger words
         return (model_lora, all_triggers, active_triggers)
 
